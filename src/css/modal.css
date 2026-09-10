@@ -1,0 +1,66 @@
+.fondo_modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.caja_modal {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+.caja_modal h2 { margin: 0 0 4px 0; }
+
+.caja_modal label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: #444;
+}
+.caja_modal input, .caja_modal textarea {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.fila_fechas {
+    display: flex;
+    gap: 10px;
+}
+.fila_fechas label { flex: 1; }
+
+.fila_botones_modal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+.botones_derecha { display: flex; gap: 8px; }
+
+.boton_borrar {
+    background: #fff;
+    color: #e44;
+    border: 1px solid #e44;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+@media (max-width: 480px) {
+    .fila_fechas { flex-direction: column; }
+}

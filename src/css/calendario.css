@@ -1,0 +1,196 @@
+.calendario_pagina {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    box-sizing: border-box;
+    font-family: system-ui, sans-serif;
+    position: relative;
+}
+.calendario_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #ddd;
+}
+.header_izquierda,
+.header_derecha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.calendario_header h1 {
+    font-size: 1.1rem;
+    margin: 0 0 0 8px;
+}
+.nombre_usuario {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.boton_icono {
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+.boton_icono:hover {
+    background: #f0f0f0;
+}
+
+.grilla_dias_semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.8rem;
+    color: #666;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.grilla_calendario {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    overflow-y: auto;
+}
+
+.celda_dia {
+    border: 1px solid #eee;
+    padding: 4px;
+    min-height: 90px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-sizing: border-box;
+}
+.celda_dia:hover {
+    background: #fafafa;
+}
+.celda_dia.fuera_de_mes {
+    color: #bbb;
+    background: #fbfbfb;
+}
+.celda_dia.es_hoy .numero_dia {
+    background: #46e;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.numero_dia {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.lista_tareas_dia {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+.chip_tarea {
+    background: #46e;
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.chip_mas {
+    font-size: 0.7rem;
+    color: #888;
+}
+
+.boton_microfono {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: #46e;
+    color: #fff;
+    font-size: 1.6rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    z-index: 20;
+}
+.boton_microfono.escuchando {
+    background: #e44;
+    animation: pulso 1.2s infinite;
+}
+@keyframes pulso {
+    0% {
+        box-shadow: 0 0 0 0 rgba(228, 68, 68, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 16px rgba(228, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(228, 68, 68, 0);
+    }
+}
+
+.burbuja_transcripcion {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    max-width: 280px;
+    background: #222;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    z-index: 20;
+}
+
+.indicador_cargando {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #222;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    z-index: 20;
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+    .calendario_header h1 {
+        font-size: 1rem;
+        width: 100%;
+        order: 3;
+        margin-left: 0;
+    }
+    .celda_dia {
+        min-height: 60px;
+        font-size: 0.8rem;
+    }
+    .chip_tarea {
+        font-size: 0.62rem;
+    }
+    .boton_microfono {
+        width: 52px;
+        height: 52px;
+        font-size: 1.3rem;
+        bottom: 16px;
+        right: 16px;
+    }
+}
