@@ -240,7 +240,7 @@ function Pagina_principal() {
                         "No existe ninguna tarea en ese horario y día, vuelva a intentarlo.",
                     );
                 }
-                //global.location.reload();
+                global.location.reload();
 
                 // Opcional: Limpiamos los textos del asistente en pantalla para terminar el ciclo
                 setTextoCompleto("");
@@ -281,7 +281,7 @@ function Pagina_principal() {
         variable.push(tarea);
         console.log(JSON.stringify(variable));
         await realizar_peticion_post(JSON.stringify(variable));
-        global.location.reload();
+        //global.location.reload();
     };
     return (
         <div className="calendario_pagina">
