@@ -240,12 +240,11 @@ function Pagina_principal() {
                         "No existe ninguna tarea en ese horario y día, vuelva a intentarlo.",
                     );
                 }
-                global.location.reload();
+                //global.location.reload();
 
                 // Opcional: Limpiamos los textos del asistente en pantalla para terminar el ciclo
                 setTextoCompleto("");
                 setTextoParcial("");
-
                 // Refrescamos el calendario en pantalla
             } catch (error) {
                 console.error(
