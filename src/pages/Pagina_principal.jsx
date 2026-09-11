@@ -17,6 +17,16 @@ import { Context_user } from "../contexts/Context_usuario.jsx";
 // 1. Creamos las referencias para controlar los temporizadores de manera independiente
 
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+// El backend manda las fechas como texto con espacio ("2026-09-11 07:00:00"),
+// y new Date() de JavaScript no siempre lo interpreta bien (da fecha inválida
+// en algunos navegadores). Reemplazamos el espacio por "T" para que quede en
+// formato ISO real y se pueda ordenar/comparar sin problemas.
+function parsearFecha(fechaTexto) {
+    if (!fechaTexto) return new Date(NaN);
+    return new Date(String(fechaTexto).replace(" ", "T"));
+}
+
 const MESES = [
     "Enero",
     "Febrero",
@@ -106,8 +116,8 @@ function Pagina_principal() {
 
     const tareasPorDia = (dia) => {
         return tareas.filter((t) => {
-            let f = new Date(t.fecha_inicio);
-            f = new Date(t.fecha_final);
+            let f = parsearFecha(t.fecha_inicio);
+            f = parsearFecha(t.fecha_final);
             return (
                 f.getFullYear() === dia.getFullYear() &&
                 f.getMonth() === dia.getMonth() &&
@@ -365,7 +375,8 @@ function Pagina_principal() {
                     const tareasDia = tareasPorDia(dia);
                     const tareasOrdenadas = tareasDia.sort(
                         (a, b) =>
-                            new Date(a.fecha_inicio) - new Date(b.fecha_inicio),
+                            parsearFecha(a.fecha_inicio) -
+                            parsearFecha(b.fecha_inicio),
                     );
 
                     return (
@@ -377,7 +388,7 @@ function Pagina_principal() {
                             <span className="numero_dia">{dia.getDate()}</span>
                             <div className="lista_tareas_dia">
                                 {tareasOrdenadas.slice(0, 2).map((t) => {
-                                    const fechaObj = new Date(t.fecha_inicio);
+                                    const fechaObj = parsearFecha(t.fecha_inicio);
                                     const horaFormateada = !isNaN(fechaObj)
                                         ? fechaObj.toLocaleTimeString(
                                               "es-AR",

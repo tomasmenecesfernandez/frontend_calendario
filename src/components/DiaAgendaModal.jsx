@@ -1,6 +1,14 @@
+// El backend manda las fechas como texto con espacio ("2026-09-11 07:00:00"),
+// y new Date() de JavaScript no siempre lo interpreta bien. Reemplazamos el
+// espacio por "T" para que quede en formato ISO real.
+function parsearFecha(fechaTexto) {
+    if (!fechaTexto) return new Date(NaN);
+    return new Date(String(fechaTexto).replace(" ", "T"));
+}
+
 function DiaAgendaModal({ dia, tareas, onAbrirTarea, onCerrar }) {
     const tareasOrdenadas = [...tareas].sort(
-        (a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio),
+        (a, b) => parsearFecha(a.fecha_inicio) - parsearFecha(b.fecha_inicio),
     );
 
     const tituloDia = dia
@@ -22,7 +30,7 @@ function DiaAgendaModal({ dia, tareas, onAbrirTarea, onCerrar }) {
                 </div>
                 <div className="lista_agenda_dia">
                     {tareasOrdenadas.map((t) => {
-                        const inicio = new Date(t.fecha_inicio);
+                        const inicio = parsearFecha(t.fecha_inicio);
                         const horaFormateada = !isNaN(inicio)
                             ? inicio.toLocaleTimeString("es-AR", {
                                   hour: "2-digit",
