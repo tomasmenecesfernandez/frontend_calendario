@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import TareaModal from "../components/TareaModal";
+import DiaAgendaModal from "../components/DiaAgendaModal";
 import "../css/calendario.css";
 import { Context_user } from "../contexts/Context_usuario.jsx";
 
@@ -44,9 +45,19 @@ function Pagina_principal() {
     const [tareaSeleccionada, setTareaSeleccionada] = useState(null);
     const [fechaPrellenada, setFechaPrellenada] = useState(null);
 
+    // Día que se muestra en el modal de agenda completa (el que abre "+X más")
+    const [diaAgendaAbierto, setDiaAgendaAbierto] = useState(null);
+
     const [escuchando, setEscuchando] = useState(false);
     const [textoParcial, setTextoParcial] = useState("");
     const reconocimientoRef = useRef(null);
+
+    // Guardamos si el usuario detuvo el micrófono a propósito. Si no lo detuvo
+    // él, y el reconocimiento se corta solo (por silencio), lo reiniciamos.
+    const detenidoManualmenteRef = useRef(false);
+    // El texto acumulado ahora vive en un ref para que sobreviva a los reinicios
+    // automáticos del reconocimiento (antes se perdía cada vez que se cortaba).
+    const textoAcumuladoRef = useRef("");
 
     const [textoCompleto, setTextoCompleto] = useState("");
     const timersTareasRef = useRef({});
@@ -64,7 +75,6 @@ function Pagina_principal() {
             );
             const datos_lectura = await respuesta_leer_calendario.json();
             console.log("se leyo el calendario: ", datos_lectura);
-            // Guardamos las tareas en el estado para que se rendericen en pantalla
             setTareas(Array.isArray(datos_lectura) ? datos_lectura : []);
         } catch (error) {
             console.error("Error al cargar tareas:", error);
@@ -73,7 +83,6 @@ function Pagina_principal() {
         }
     }, [id]);
 
-    // Ejecuta la carga de tareas al iniciar o cuando cambie el ID
     useEffect(() => {
         cargarTareas();
     }, [cargarTareas]);
@@ -129,23 +138,16 @@ function Pagina_principal() {
         setModalAbierto(true);
     };
 
+    // Abre el modal de agenda completa del día (botón "+X más")
+    const abrirAgendaDelDia = (dia) => {
+        setDiaAgendaAbierto(dia);
+    };
+
     // --- Micrófono: Web Speech API ---
     const soportaVoz =
         "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
 
-    const alternarMicrofono = () => {
-        if (!soportaVoz) {
-            alert(
-                "Tu navegador no soporta reconocimiento de voz. Probá con Chrome.",
-            );
-            return;
-        }
-
-        if (escuchando) {
-            reconocimientoRef.current?.stop();
-            return;
-        }
-
+    const iniciarReconocimiento = useCallback(() => {
         const SpeechRecognition =
             window.SpeechRecognition || window.webkitSpeechRecognition;
         const reconocimiento = new SpeechRecognition();
@@ -153,13 +155,8 @@ function Pagina_principal() {
         reconocimiento.continuous = true;
         reconocimiento.interimResults = true;
 
-        let textoAcumuladoSincronico = "";
-
         reconocimiento.onstart = () => {
             setEscuchando(true);
-            setTextoCompleto("");
-            setTextoParcial("");
-            textoAcumuladoSincronico = ""; // Limpiamos al iniciar
         };
 
         reconocimiento.onresult = (evento) => {
@@ -169,11 +166,12 @@ function Pagina_principal() {
                 const transcripcion = evento.results[i][0].transcript;
 
                 if (evento.results[i].isFinal) {
-                    // ¡AQUÍ ESTÁ EL TRUCO!: Guardamos instantáneamente en la variable local (Sincrónico)
-                    textoAcumuladoSincronico += " " + transcripcion.trim();
-
-                    // Y también actualizamos el estado de React para que se vea lindo en pantalla
-                    setTextoCompleto(textoAcumuladoSincronico.trim());
+                    textoAcumuladoRef.current = (
+                        textoAcumuladoRef.current +
+                        " " +
+                        transcripcion.trim()
+                    ).trim();
+                    setTextoCompleto(textoAcumuladoRef.current);
                 } else {
                     textoIntermedio += transcripcion;
                 }
@@ -181,20 +179,38 @@ function Pagina_principal() {
             setTextoParcial(textoIntermedio);
         };
 
+        reconocimiento.onerror = (evento) => {
+            console.log("Error de reconocimiento de voz:", evento.error);
+            // "no-speech" y "network" pasan seguido en celular por silencios cortos;
+            // no los tratamos como que el usuario quiso cortar el micrófono.
+        };
+
         reconocimiento.onend = async () => {
+            // Si el usuario NO tocó el botón para detenerlo, es que el navegador
+            // cortó el reconocimiento solo (pasa mucho en celular tras un silencio
+            // breve). En ese caso lo reiniciamos: el corte lo decide el usuario.
+            if (!detenidoManualmenteRef.current) {
+                try {
+                    reconocimiento.start();
+                    return;
+                } catch (error) {
+                    console.log("No se pudo reiniciar el micrófono:", error);
+                }
+            }
+
             setEscuchando(false);
             setTextoParcial("");
 
-            // Usamos directamente la variable local que SI tiene todo el texto completo al instante
-            const textoListoParaEnviar = textoAcumuladoSincronico.trim();
+            const textoListoParaEnviar = textoAcumuladoRef.current.trim();
+            textoAcumuladoRef.current = "";
 
             if (!textoListoParaEnviar) {
                 console.log("No se detectó ningún texto para enviar.");
+                setTextoCompleto("");
                 return;
             }
 
             try {
-                // Ahora sí verás el texto completo exacto aquí en la consola
                 console.log(
                     "Texto completo final capturado:",
                     textoListoParaEnviar,
@@ -207,7 +223,6 @@ function Pagina_principal() {
                         headers: {
                             "Content-Type": "application/json",
                         },
-                        // Enviamos la variable local garantizada
                         body: JSON.stringify({ prompt: textoListoParaEnviar }),
                     },
                 );
@@ -221,14 +236,7 @@ function Pagina_principal() {
                 if (!textoExtraido.includes("[" && "]")) {
                     textoExtraido = (await "[ ") + textoExtraido + " ]";
                 }
-                // Enviamos los datos procesados a tu backend del calendario
-                //await fetch(`http://localhost:4000/calendario/tareas/${id}`, {
-
                 const respuesta34 = await realizar_peticion_post(textoExtraido);
-
-                // Recibimos la respuesta del backend
-
-                // CORRECCIÓN 2: Ahora verás en tu consola exactamente { respuesta: "funciona" } o lo que retorne tu BD
 
                 const textoRespuesta = await respuesta34.text();
                 console.log(
@@ -242,10 +250,8 @@ function Pagina_principal() {
                 }
                 global.location.reload();
 
-                // Opcional: Limpiamos los textos del asistente en pantalla para terminar el ciclo
                 setTextoCompleto("");
                 setTextoParcial("");
-                // Refrescamos el calendario en pantalla
             } catch (error) {
                 console.error(
                     "Error en el flujo de asistencia por voz:",
@@ -256,6 +262,29 @@ function Pagina_principal() {
 
         reconocimientoRef.current = reconocimiento;
         reconocimiento.start();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
+
+    const alternarMicrofono = () => {
+        if (!soportaVoz) {
+            alert(
+                "Tu navegador no soporta reconocimiento de voz. Probá con Chrome.",
+            );
+            return;
+        }
+
+        if (escuchando) {
+            // El usuario decide cortar: acá sí se detiene de verdad.
+            detenidoManualmenteRef.current = true;
+            reconocimientoRef.current?.stop();
+            return;
+        }
+
+        detenidoManualmenteRef.current = false;
+        textoAcumuladoRef.current = "";
+        setTextoCompleto("");
+        setTextoParcial("");
+        iniciarReconocimiento();
     };
 
     const hoy = new Date();
@@ -266,7 +295,6 @@ function Pagina_principal() {
             {
                 method: "POST",
                 headers: { "Content-type": "application/json" },
-                // Enviamos el objeto JSON limpio en lugar del string con los "\n"
                 body: JSON.stringify({
                     datos: textoExtraido,
                 }),
@@ -280,9 +308,8 @@ function Pagina_principal() {
         const variable = [];
         variable.push(tarea);
         console.log(JSON.stringify(variable));
-        alert(variable);
         await realizar_peticion_post(JSON.stringify(variable));
-        //global.location.reload();
+        global.location.reload();
     };
     return (
         <div className="calendario_pagina">
@@ -336,124 +363,111 @@ function Pagina_principal() {
                         dia.getMonth() === hoy.getMonth() &&
                         dia.getDate() === hoy.getDate();
                     const tareasDia = tareasPorDia(dia);
+                    const tareasOrdenadas = tareasDia.sort(
+                        (a, b) =>
+                            new Date(a.fecha_inicio) - new Date(b.fecha_inicio),
+                    );
 
                     return (
                         <div
                             key={i}
                             className={`celda_dia ${esMesActual ? "" : "fuera_de_mes"} ${esHoy ? "es_hoy" : ""}`}
-                            onClick={() => abrirNuevaTarea(dia)} // ⚡ La celda del día reacciona al instante como antes
+                            onClick={() => abrirNuevaTarea(dia)}
                         >
                             <span className="numero_dia">{dia.getDate()}</span>
                             <div className="lista_tareas_dia">
-                                {/* Ordenamos por fecha_inicio antes de hacer el slice */}
-                                {tareasDia
-                                    .sort(
-                                        (a, b) =>
-                                            new Date(a.fecha_inicio) -
-                                            new Date(b.fecha_inicio),
-                                    )
-                                    .slice(0, 3)
-                                    .map((t) => {
-                                        // Extraemos de forma segura la hora y los minutos de la tarea
-                                        const fechaObj = new Date(
-                                            t.fecha_inicio,
-                                        );
-                                        const horaFormateada = !isNaN(fechaObj)
-                                            ? fechaObj.toLocaleTimeString(
-                                                  "es-AR",
-                                                  {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                  },
-                                              )
-                                            : "";
+                                {tareasOrdenadas.slice(0, 3).map((t) => {
+                                    const fechaObj = new Date(t.fecha_inicio);
+                                    const horaFormateada = !isNaN(fechaObj)
+                                        ? fechaObj.toLocaleTimeString(
+                                              "es-AR",
+                                              {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                              },
+                                          )
+                                        : "";
 
-                                        const idTarea = t.id || t._id; // ID único de la tarea para el temporizador
+                                    const idTarea = t.id || t._id;
 
-                                        return (
-                                            <div
-                                                key={idTarea}
-                                                className="chip_tarea"
-                                                style={{
-                                                    display: "flex",
-                                                    justifyContent:
-                                                        "space-between",
-                                                    alignItems: "center",
-                                                    gap: "4px",
-                                                    // 🎨 CAMBIO AQUÍ: Creamos una variable CSS que React controla dinámicamente
-                                                    "--fondo-dinamico":
-                                                        t.completada
-                                                            ? "#2ecc71"
-                                                            : "#46e",
-                                                    backgroundColor:
-                                                        "var(--fondo-dinamico)",
-                                                    transition:
-                                                        "background-color 0.2s ease",
-                                                }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Evita que se abra una "nueva tarea" al tocar el fondo
+                                    return (
+                                        <div
+                                            key={idTarea}
+                                            className="chip_tarea"
+                                            style={{
+                                                display: "flex",
+                                                justifyContent:
+                                                    "space-between",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                "--fondo-dinamico":
+                                                    t.completada
+                                                        ? "#2ecc71"
+                                                        : "#46e",
+                                                backgroundColor:
+                                                    "var(--fondo-dinamico)",
+                                                transition:
+                                                    "background-color 0.2s ease",
+                                            }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
 
-                                                    // Si ya se hizo un primer clic en esta tarea específica...
-                                                    if (
-                                                        timersTareasRef.current[
-                                                            idTarea
-                                                        ]
-                                                    ) {
-                                                        clearTimeout(
-                                                            timersTareasRef
-                                                                .current[
-                                                                idTarea
-                                                            ],
-                                                        ); // Cancelamos el clic simple
+                                                if (
+                                                    timersTareasRef.current[
+                                                        idTarea
+                                                    ]
+                                                ) {
+                                                    clearTimeout(
+                                                        timersTareasRef
+                                                            .current[idTarea],
+                                                    );
+                                                    delete timersTareasRef
+                                                        .current[idTarea];
+
+                                                    cambiar_estado_completado(
+                                                        t,
+                                                    );
+                                                } else {
+                                                    timersTareasRef.current[
+                                                        idTarea
+                                                    ] = setTimeout(() => {
+                                                        abrirTareaExistente(t);
                                                         delete timersTareasRef
-                                                            .current[idTarea]; // Limpiamos la referencia
-
-                                                        cambiar_estado_completado(
-                                                            t,
-                                                        ); // 💥 EJECUTA TU SEGUNDA TAREA AQUÍ (Tachar/Completar)
-                                                    } else {
-                                                        // Primer clic: esperamos un instante por si viene el segundo
-                                                        timersTareasRef.current[
-                                                            idTarea
-                                                        ] = setTimeout(() => {
-                                                            abrirTareaExistente(
-                                                                t,
-                                                            ); // 🟦 EJECUTA EL CLIC SIMPLE TRADICIONAL (Ver detalles)
-                                                            delete timersTareasRef
-                                                                .current[
-                                                                idTarea
-                                                            ];
-                                                        }, 250); // 250 milisegundos de ventana de tiempo
-                                                    }
+                                                            .current[idTarea];
+                                                    }, 250);
+                                                }
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
                                                 }}
                                             >
-                                                {/* El título se mantiene alineado a la izquierda */}
-                                                <span
-                                                    style={{
-                                                        overflow: "hidden",
-                                                        textOverflow:
-                                                            "ellipsis",
-                                                        whiteSpace: "nowrap",
-                                                    }}
-                                                >
-                                                    {t.titulo}
-                                                </span>
-                                                {/* La hora se empuja y se fija firmemente a la derecha */}
-                                                <strong
-                                                    style={{
-                                                        whiteSpace: "nowrap",
-                                                        fontSize: "0.85em",
-                                                        opacity: 0.9,
-                                                    }}
-                                                >
-                                                    {horaFormateada}
-                                                </strong>
-                                            </div>
-                                        );
-                                    })}
-                                {tareasDia.length > 3 && (
-                                    <div className="chip_mas">
-                                        +{tareasDia.length - 3} más
+                                                {t.titulo}
+                                            </span>
+                                            <strong
+                                                style={{
+                                                    whiteSpace: "nowrap",
+                                                    fontSize: "0.85em",
+                                                    opacity: 0.9,
+                                                }}
+                                            >
+                                                {horaFormateada}
+                                            </strong>
+                                        </div>
+                                    );
+                                })}
+                                {tareasOrdenadas.length > 3 && (
+                                    <div
+                                        className="chip_mas"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            abrirAgendaDelDia(dia);
+                                        }}
+                                    >
+                                        +{tareasOrdenadas.length - 3} más
                                     </div>
                                 )}
                             </div>
@@ -472,11 +486,10 @@ function Pagina_principal() {
             >
                 🎤
             </button>
-            {(escuchando || textoParcial) && (
+            {escuchando && (
                 <div className="burbuja_transcripcion">
-                    {escuchando
-                        ? textoParcial || "Escuchando..."
-                        : "Procesando..."}
+                    {(textoCompleto + " " + textoParcial).trim() ||
+                        "Escuchando..."}
                 </div>
             )}
             {cargando && (
@@ -499,13 +512,23 @@ function Pagina_principal() {
                     onBorrar={
                         tareaSeleccionada
                             ? () => {
-                                  // Refresca la pantalla al borrar una tarea desde el modal
                                   cargarTareas();
                                   setModalAbierto(false);
                               }
                             : null
                     }
                     onCerrar={() => setModalAbierto(false)}
+                />
+            )}
+            {diaAgendaAbierto && (
+                <DiaAgendaModal
+                    dia={diaAgendaAbierto}
+                    tareas={tareasPorDia(diaAgendaAbierto)}
+                    onAbrirTarea={(tarea) => {
+                        setDiaAgendaAbierto(null);
+                        abrirTareaExistente(tarea);
+                    }}
+                    onCerrar={() => setDiaAgendaAbierto(null)}
                 />
             )}
         </div>

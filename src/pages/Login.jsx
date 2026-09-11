@@ -29,7 +29,7 @@ function Login() {
                         "El nombre completo tiene que tener como mínimo 6 letras",
                     );
                 }
-                if (!email.includes("@") || !email.includes(".") || !email.includes("com")) {
+                if (!email.includes("@") || !email.includes(".")) {
                     throw new Error("El correo no es válido");
                 }
                 if (contraseña.length < 6) {

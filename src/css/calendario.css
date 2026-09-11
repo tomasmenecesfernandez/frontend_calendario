@@ -52,23 +52,28 @@
     border-bottom: 1px solid #eee;
 }
 
+/* La grilla ya no usa "1fr" en las filas: eso hacía que cada fila creciera según
+   la cantidad de contenido que tuviera adentro. Ahora las filas tienen una altura
+   fija, así el calendario mantiene siempre la misma forma sin importar cuántas
+   tareas tenga cada día (clave para que no se rompa en el celular). */
 .grilla_calendario {
     flex: 1;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: 1fr;
+    grid-auto-rows: 96px;
     overflow-y: auto;
 }
 
 .celda_dia {
     border: 1px solid #eee;
     padding: 4px;
-    min-height: 90px;
+    height: 96px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     gap: 2px;
     box-sizing: border-box;
+    overflow: hidden;
 }
 .celda_dia:hover {
     background: #fafafa;
@@ -91,6 +96,7 @@
 .numero_dia {
     font-size: 0.85rem;
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 .lista_tareas_dia {
@@ -98,6 +104,7 @@
     flex-direction: column;
     gap: 2px;
     overflow: hidden;
+    min-height: 0;
 }
 .chip_tarea {
     background: #46e;
@@ -108,10 +115,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 .chip_mas {
     font-size: 0.7rem;
-    color: #888;
+    color: #46e;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.chip_mas:hover {
+    text-decoration: underline;
 }
 
 .boton_microfono {
@@ -149,13 +163,16 @@
     position: fixed;
     bottom: 96px;
     right: 24px;
-    max-width: 280px;
+    left: 24px;
+    max-width: 320px;
+    margin-left: auto;
     background: #222;
     color: #fff;
     padding: 10px 14px;
     border-radius: 10px;
     font-size: 0.85rem;
     z-index: 20;
+    word-break: break-word;
 }
 
 .indicador_cargando {
@@ -171,6 +188,92 @@
     z-index: 20;
 }
 
+/* --- Modal "ver día completo", estilo agenda de Google Calendar --- */
+.fondo_modal_dia {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+    padding: 16px;
+    box-sizing: border-box;
+}
+.caja_modal_dia {
+    background: #fff;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+.encabezado_modal_dia {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+}
+.encabezado_modal_dia h2 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+.cerrar_modal_dia {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #666;
+}
+.lista_agenda_dia {
+    overflow-y: auto;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.fila_agenda_dia {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.fila_agenda_dia:hover {
+    background: #f5f5f5;
+}
+.hora_agenda_dia {
+    min-width: 52px;
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 600;
+    padding-top: 2px;
+}
+.tarjeta_agenda_dia {
+    flex: 1;
+    background: #46e;
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+.tarjeta_agenda_dia.completada {
+    background: #2ecc71;
+}
+.tarjeta_agenda_dia .titulo_agenda {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.tarjeta_agenda_dia .descripcion_agenda {
+    font-size: 0.78rem;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
 /* --- Responsive --- */
 @media (max-width: 640px) {
     .calendario_header h1 {
@@ -179,11 +282,19 @@
         order: 3;
         margin-left: 0;
     }
+    .grilla_calendario {
+        grid-auto-rows: 64px;
+    }
     .celda_dia {
-        min-height: 60px;
+        height: 64px;
         font-size: 0.8rem;
+        padding: 2px;
     }
     .chip_tarea {
+        font-size: 0.6rem;
+        padding: 1px 4px;
+    }
+    .chip_mas {
         font-size: 0.62rem;
     }
     .boton_microfono {
@@ -192,5 +303,11 @@
         font-size: 1.3rem;
         bottom: 16px;
         right: 16px;
+    }
+    .burbuja_transcripcion {
+        left: 12px;
+        right: 12px;
+        bottom: 80px;
+        max-width: none;
     }
 }
