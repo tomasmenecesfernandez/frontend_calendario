@@ -280,6 +280,7 @@ function Pagina_principal() {
         const variable = [];
         variable.push(tarea);
         console.log(JSON.stringify(variable));
+        alert(variable);
         await realizar_peticion_post(JSON.stringify(variable));
         //global.location.reload();
     };
