@@ -376,7 +376,7 @@ function Pagina_principal() {
                         >
                             <span className="numero_dia">{dia.getDate()}</span>
                             <div className="lista_tareas_dia">
-                                {tareasOrdenadas.slice(0, 3).map((t) => {
+                                {tareasOrdenadas.slice(0, 2).map((t) => {
                                     const fechaObj = new Date(t.fecha_inicio);
                                     const horaFormateada = !isNaN(fechaObj)
                                         ? fechaObj.toLocaleTimeString(
@@ -459,7 +459,7 @@ function Pagina_principal() {
                                         </div>
                                     );
                                 })}
-                                {tareasOrdenadas.length > 3 && (
+                                {tareasOrdenadas.length > 2 && (
                                     <div
                                         className="chip_mas"
                                         onClick={(e) => {
@@ -467,7 +467,7 @@ function Pagina_principal() {
                                             abrirAgendaDelDia(dia);
                                         }}
                                     >
-                                        +{tareasOrdenadas.length - 3} más
+                                        +{tareasOrdenadas.length - 2} más
                                     </div>
                                 )}
                             </div>
